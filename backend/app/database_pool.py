@@ -1,3 +1,14 @@
+# ============================================================
+# 文件名称：database_pool.py
+# 生成日期：2026-10-22
+# 修改日期：2026-11-20
+# 版本信息：v0.261115
+# 作    者：JUN
+# 备    注：本程序由AI辅助完成。
+#           文件功能：实现 database_pool 模块相关功能。
+#           文件用途：供TAAS的 taas_api/backend/app/database_pool.py 模块使用。
+#           注意事项：运行前检查依赖与配置；涉及数据或服务变更时先备份并验证。
+# ============================================================
 """Bounded PostgreSQL connection reuse for the API and NiceGUI console."""
 from contextlib import contextmanager
 from threading import BoundedSemaphore, Lock
@@ -14,7 +25,10 @@ def get_pool(settings):
     global _pool
     with _lock:
         if _pool is None:
-            options = dict(settings)
+            if settings.get('database_type') == 'mysql':
+                from .mysql_backend import Pool
+                _pool=Pool(settings,20,dictionaries=True); return _pool
+            options = {k:v for k,v in settings.items() if k != 'database_type'}
             options['options'] = (options.get('options', '') + ' -c search_path=taas').strip()
             options.setdefault('connect_timeout', 8)
             _pool = ThreadedConnectionPool(2, 20, cursor_factory=RealDictCursor, **options)

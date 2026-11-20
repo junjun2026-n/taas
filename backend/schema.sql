@@ -1,3 +1,14 @@
+-- ============================================================
+-- 文件名称：schema.sql
+-- 生成日期：2026-10-11
+-- 修改日期：2026-11-20
+-- 版本信息：v0.261115
+-- 作    者：JUN
+-- 备    注：本程序由AI辅助完成。
+--           文件功能：实现 schema 模块相关功能。
+--           文件用途：供TAAS的 taas_api/backend/schema.sql 模块使用。
+--           注意事项：运行前检查依赖与配置；涉及数据或服务变更时先备份并验证。
+-- ============================================================
 -- Independent TaaS PostgreSQL schema. Safe to run repeatedly.
 CREATE TABLE IF NOT EXISTS users (id BIGSERIAL PRIMARY KEY, username VARCHAR(120) UNIQUE NOT NULL, password_hash VARCHAR(128) NOT NULL, display_name VARCHAR(160) NOT NULL, email VARCHAR(255) DEFAULT '', role VARCHAR(40) NOT NULL DEFAULT 'customer', status VARCHAR(40) NOT NULL DEFAULT 'active', created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 ALTER TABLE users ADD COLUMN IF NOT EXISTS balance NUMERIC(16,4) NOT NULL DEFAULT 0;

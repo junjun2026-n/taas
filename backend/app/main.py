@@ -1,3 +1,14 @@
+# ============================================================
+# 文件名称：main.py
+# 生成日期：2026-10-11
+# 修改日期：2026-11-20
+# 版本信息：v0.261115
+# 作    者：JUN
+# 备    注：本程序由AI辅助完成。
+#           文件功能：组织程序入口、服务初始化及请求处理。
+#           文件用途：供TAAS的 taas_api/backend/app/main.py 模块使用。
+#           注意事项：运行前检查依赖与配置；涉及数据或服务变更时先备份并验证。
+# ============================================================
 import hashlib, os, secrets, json
 from contextlib import contextmanager, closing
 from datetime import date, datetime, timedelta, timezone
@@ -5,6 +16,7 @@ from pathlib import Path
 from decimal import Decimal
 from urllib.parse import urlparse
 import psycopg2
+import pymysql
 import httpx
 from psycopg2.extras import RealDictCursor
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -53,7 +65,11 @@ def hash_password(value): return hashlib.sha256(value.encode()).hexdigest()
 def init_db(settings=None):
     schema = (ROOT / "backend" / "schema.sql").read_text(encoding="utf-8")
     password = os.getenv("TAAS_ADMIN_PASSWORD", "SET_LOCALLY_BEFORE_USE")
-    target = closing(psycopg2.connect(**settings, connect_timeout=8, options='-c search_path=taas')) if settings is not None else db()
+    if settings is not None and settings.get('database_type') == 'mysql':
+        from .mysql_backend import connect
+        target = closing(connect(settings,dictionaries=True))
+    else:
+        target = closing(psycopg2.connect(**{k:v for k,v in settings.items() if k!='database_type'}, connect_timeout=8, options='-c search_path=taas')) if settings is not None else db()
     with target as conn, conn:
         with conn.cursor() as cur:
             cur.execute("CREATE SCHEMA IF NOT EXISTS taas")
@@ -190,7 +206,7 @@ def health(): query("SELECT 1",one=True); return {"status":"ok","database":"post
 def register(payload:Register):
     if len(payload.password)<8: raise HTTPException(400,"密码至少 8 位")
     try: row=query("INSERT INTO users(username,password_hash,display_name,email) VALUES(%s,%s,%s,%s) RETURNING id",(payload.username.strip(),hash_password(payload.password),payload.display_name.strip() or payload.username,payload.email.strip()),True); return {"id":row["id"],"message":"注册成功"}
-    except psycopg2.errors.UniqueViolation: raise HTTPException(409,"用户名已存在")
+    except (psycopg2.errors.UniqueViolation,pymysql.err.IntegrityError): raise HTTPException(409,"用户名已存在")
 
 @app.post("/api/auth/login")
 def login(payload:Credentials):
@@ -316,7 +332,7 @@ def users(user=Depends(require("users.manage"))): return query("SELECT id,userna
 def create_user(payload:UserPayload,user=Depends(require("users.manage"))):
     try:
         row=query("INSERT INTO users(username,password_hash,display_name,email,role) VALUES(%s,%s,%s,%s,%s) RETURNING id,username,display_name,email,role,status",(payload.username.strip(),hash_password(payload.password),payload.display_name.strip() or payload.username,payload.email.strip(),"customer"),True); return row
-    except psycopg2.errors.UniqueViolation: raise HTTPException(409,"用户名已存在")
+    except (psycopg2.errors.UniqueViolation,pymysql.err.IntegrityError): raise HTTPException(409,"用户名已存在")
 
 class UserStatusPayload(BaseModel):
     status: str = Field(pattern='^(active|disabled)$')

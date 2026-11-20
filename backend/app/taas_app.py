@@ -1,3 +1,14 @@
+# ============================================================
+# 文件名称：taas_app.py
+# 生成日期：2026-10-11
+# 修改日期：2026-11-20
+# 版本信息：v0.261115
+# 作    者：JUN
+# 备    注：本程序由AI辅助完成。
+#           文件功能：实现 taas_app 模块相关功能。
+#           文件用途：供TAAS的 taas_api/backend/app/taas_app.py 模块使用。
+#           注意事项：运行前检查依赖与配置；涉及数据或服务变更时先备份并验证。
+# ============================================================
 """TaaS management console for the independent TaaS backend.
 
 The REST/OpenAI API remains in ``main.py``; this module provides the Python UI.
@@ -1004,10 +1015,12 @@ def dashboard():
             if 'payments.configure' in permissions:
                 payment_settings(user)
             with ui.card().classes('w-full'):
-                ui.label('PostgreSQL 数据库配置').classes('text-xl font-bold')
+                ui.label('数据库配置').classes('text-xl font-bold')
                 current_db = api.DATABASE_SETTINGS
+                db_type = ui.select({'postgresql':'PostgreSQL（PQ）','mysql':'MySQL / MariaDB'}, label='数据库类型', value=current_db.get('database_type','postgresql'))
                 host = ui.input('数据库地址', value=current_db.get('host', 'localhost'))
-                port = ui.number('端口', value=int(current_db.get('port', 5432)), min=1, max=65535)
+                port = ui.number('端口', value=int(current_db.get('port', 3306 if current_db.get('database_type')=='mysql' else 5432)), min=1, max=65535)
+                db_type.on_value_change(lambda e: port.set_value(3306 if e.value=='mysql' else 5432))
                 dbname = ui.input('数据库名称', value=current_db.get('dbname', ''))
                 db_user = ui.input('数据库用户名', value=current_db.get('user', ''))
                 db_password = ui.input('数据库密码（留空保留当前密码）', password=True, password_toggle_button=True)
@@ -1017,10 +1030,10 @@ def dashboard():
                     try:
                         if not query('SELECT 1 FROM role_permissions WHERE role=%s AND permission_code=%s', (user['role'], 'users.manage'), one=True):
                             raise ValueError('没有数据库配置权限')
-                        same=(host.value.strip(),int(port.value),dbname.value.strip(),db_user.value.strip())==(current_db.get('host'),int(current_db.get('port',5432)),current_db.get('dbname'),current_db.get('user'))
+                        same=db_type.value==current_db.get('database_type','postgresql') and (host.value.strip(),int(port.value),dbname.value.strip(),db_user.value.strip())==(current_db.get('host'),int(current_db.get('port',5432)),current_db.get('dbname'),current_db.get('user'))
                         if not db_password.value and not same:
                             raise ValueError('更换连接时请填写目标数据库密码')
-                        config = DatabaseConfig(host=host.value.strip(),port=int(port.value),dbname=dbname.value.strip(),user=db_user.value.strip(),password=db_password.value or current_db.get('password',''),sslmode=sslmode.value)
+                        config = DatabaseConfig(database_type=db_type.value,host=host.value.strip(),port=int(port.value),dbname=dbname.value.strip(),user=db_user.value.strip(),password=db_password.value or current_db.get('password',''),sslmode=sslmode.value)
                         if initialize:
                             from .database_config import initialize_database
                             initialize_database(config)
