@@ -882,7 +882,7 @@ def login_view():
     clear_page()
     with ui.column().classes('w-full max-w-md mx-auto mt-24 gap-4'):
         ui.label(platform_name()).classes('text-4xl font-bold')
-        ui.label('v0.261115 · 版权归本人所有。').classes('text-xs text-gray-500')
+        ui.label('v0.261115 · 请遵守版权协议。').classes('text-xs text-gray-500')
         username = ui.input('用户名').classes('w-full')
         password = ui.input('密码', password=True, password_toggle_button=True).classes('w-full')
         notice = ui.label().classes('text-red-600')
@@ -919,7 +919,7 @@ def dashboard():
     clear_page()
     with ui.header().classes('taas-header'):
         platform_heading = ui.label(f'{platform_name()} 管理控制台').classes('text-xl font-bold')
-        ui.label('v0.261115 · 版权归本人所有。').classes('text-xs')
+        ui.label('v0.261115 · 请遵守版权协议。').classes('text-xs')
         def logout():
             query('DELETE FROM sessions WHERE token=%s', (gui_app.storage.user.get('token'),))
             gui_app.storage.user.clear()
